@@ -9,16 +9,19 @@ const ACCOUNT_CACHE_TTL = 5 * 60 * 1000;
 function createApp(db, indexer) {
   const app = express();
 
-  app.use(cors({
-    origin: [
-      'https://hiveinvite.com',
-      'https://www.hiveinvite.com',
+  const allowedOrigins = [
+    'https://hiveinvite.com',
+    'https://www.hiveinvite.com',
+  ];
+  if (process.env.NODE_ENV !== 'production') {
+    allowedOrigins.push(
       'http://localhost:8080',
       'http://localhost:8000',
       'http://127.0.0.1:8080',
       'http://127.0.0.1:8000',
-    ],
-  }));
+    );
+  }
+  app.use(cors({ origin: allowedOrigins }));
 
   app.use(rateLimit({
     windowMs: 60 * 1000,

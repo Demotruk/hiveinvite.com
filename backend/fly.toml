@@ -4,6 +4,7 @@ primary_region = 'lhr'
 [build]
 
 [env]
+  NODE_ENV = 'production'
   PORT = '3000'
   START_BLOCK = '105420000'
   DB_PATH = '/data/swarm_trust.db'
