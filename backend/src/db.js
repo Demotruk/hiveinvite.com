@@ -62,6 +62,7 @@ function initDb(dbPath) {
         SELECT trustee as account FROM trust_edges
       )
     `),
+    getDeclarers: db.prepare('SELECT DISTINCT truster FROM trust_edges'),
   };
 
   return {
@@ -102,6 +103,10 @@ function initDb(dbPath) {
         result.get(row.truster).push(row.trustee);
       }
       return result;
+    },
+
+    getDeclarers() {
+      return stmts.getDeclarers.all().map(r => r.truster);
     },
 
     getStats() {

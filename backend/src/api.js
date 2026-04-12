@@ -39,6 +39,12 @@ function createApp(db, indexer) {
   // Account existence cache
   const accountCache = new Map();
 
+  // --- GET /api/trust/declarers ---
+  app.get('/api/trust/declarers', (req, res) => {
+    const declarers = db.getDeclarers();
+    res.json({ declarers, count: declarers.length });
+  });
+
   // --- GET /api/trust/:account ---
   app.get('/api/trust/:account', (req, res) => {
     const account = req.params.account.toLowerCase().replace('@', '');
