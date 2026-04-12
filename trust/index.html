@@ -27,7 +27,7 @@
     h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
     h2 { font-size: 1.1rem; margin-bottom: 0.75rem; color: var(--text-muted); }
     .subtitle { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
-    .container { max-width: 700px; margin: 0 auto; }
+    .container { max-width: 900px; margin: 0 auto; }
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -109,6 +109,13 @@
     .tree-node .attenuation.high { color: var(--green); }
     .tree-node .attenuation.medium { color: var(--yellow); }
     .tree-node .attenuation.low { color: var(--accent); }
+    .tree-node .expand-btn {
+      cursor: pointer; color: var(--text-muted); font-size: 0.75rem;
+      margin-left: 0.5rem; background: var(--border); border: none;
+      padding: 0.1rem 0.4rem; border-radius: 3px;
+    }
+    .tree-node .expand-btn:hover { color: var(--text); background: var(--accent); }
+    .tree-node .child-loading { color: var(--text-muted); font-size: 0.8rem; margin-left: 1rem; }
     .loading { color: var(--text-muted); font-size: 0.85rem; }
     .error { color: var(--accent); font-size: 0.85rem; margin-top: 0.5rem; }
     .toast {
@@ -128,7 +135,71 @@
     #app-main { display: none; }
     .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
     .header-row .user-info { display: flex; align-items: center; gap: 0.75rem; }
+    /* Graph visualization */
+    .viz-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .viz-tabs button { font-size: 0.8rem; padding: 0.4rem 0.75rem; }
+    .viz-tab-content { display: none; }
+    .viz-tab-content.active { display: block; }
+    .viz-controls { margin-bottom: 0.5rem; }
+    .viz-controls input[type="number"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      width: 60px;
+    }
+    .viz-controls input[type="number"]:focus { outline: none; border-color: var(--accent); }
+    #graph-container {
+      width: 100%;
+      height: 500px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      display: none;
+    }
+    .viz-progress { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem; }
+    .viz-progress .cancel-btn { margin-left: 0.75rem; font-size: 0.75rem; padding: 0.2rem 0.5rem; }
+    .viz-legend {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+    .viz-legend-item { display: flex; align-items: center; gap: 0.3rem; }
+    .viz-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .viz-summary {
+      padding: 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .viz-summary strong { color: var(--text); }
+    .viz-warning {
+      padding: 0.75rem;
+      background: rgba(241,196,15,0.1);
+      border: 1px solid rgba(241,196,15,0.3);
+      border-radius: 4px;
+      font-size: 0.85rem;
+      color: var(--yellow);
+      margin-bottom: 0.5rem;
+    }
+    .viz-warning .row { margin-top: 0.5rem; }
+    @media (max-width: 600px) {
+      #graph-container { height: 350px; }
+    }
   </style>
+  <script src="https://unpkg.com/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -186,11 +257,63 @@
         <div id="downstream-tree" class="tree"></div>
         <div id="downstream-empty" class="empty" style="display:none;">No downstream trust to display.</div>
       </div>
+
+      <!-- Trust Graph Visualization -->
+      <div class="card">
+        <h3>Trust Graph</h3>
+        <div class="viz-tabs">
+          <button onclick="switchVizTab('paths')" data-tab="paths">Explore Trust Paths</button>
+          <button class="secondary" onclick="switchVizTab('neighborhood')" data-tab="neighborhood">My Neighborhood</button>
+          <button class="secondary" onclick="switchVizTab('full')" data-tab="full">Full Graph</button>
+        </div>
+
+        <div id="viz-paths" class="viz-tab-content active">
+          <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;">
+            Find all trust paths from your network to a specific onboarder.
+          </p>
+          <div class="viz-controls row">
+            <input type="text" id="path-target-input" placeholder="Onboarder username" style="flex:1;">
+            <button onclick="explorePaths()">Find Paths</button>
+          </div>
+          <div id="paths-error" class="error"></div>
+        </div>
+
+        <div id="viz-neighborhood" class="viz-tab-content">
+          <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;">
+            Visualize trust connections around you.
+          </p>
+          <div class="viz-controls row">
+            <label style="font-size:0.85rem;color:var(--text-muted);">Hops:</label>
+            <input type="number" id="neighborhood-depth" value="2" min="1" max="4">
+            <button onclick="showNeighborhood()">Load</button>
+          </div>
+        </div>
+
+        <div id="viz-full" class="viz-tab-content">
+          <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;">
+            Load the entire reachable trust network.
+          </p>
+          <button onclick="loadFullGraph()">Load Full Graph</button>
+          <div id="full-warning"></div>
+        </div>
+
+        <div id="viz-progress" class="viz-progress" style="display:none;"></div>
+        <div id="graph-container"></div>
+        <div id="viz-legend" class="viz-legend" style="display:none;">
+          <span class="viz-legend-item"><span class="viz-legend-dot" style="background:#3498db;"></span> You</span>
+          <span class="viz-legend-item"><span class="viz-legend-dot" style="background:#e31337;"></span> Trust root</span>
+          <span class="viz-legend-item"><span class="viz-legend-dot" style="background:#2ecc71;"></span> Target</span>
+          <span class="viz-legend-item"><span class="viz-legend-dot" style="background:#2a2d3a;border:1px solid #3a3d4a;"></span> Account</span>
+        </div>
+        <div id="viz-summary" class="viz-summary" style="display:none;"></div>
+      </div>
     </div>
   </div>
 
   <script>
-    const HIVE_API = 'https://api.hive.blog';
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3000'
+      : 'https://swarm-trust-api.fly.dev';
     const CUSTOM_JSON_ID = 'swarm_trust';
     const MAX_DEPTH = 3;
     const ATTENUATION = 0.5;
@@ -198,53 +321,18 @@
     let currentUser = null;
     let trustedAccounts = new Set();
 
-    // --- Hive API ---
-
-    async function hiveCall(method, params) {
-      const res = await fetch(HIVE_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 })
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message || 'Hive API error');
-      return data.result;
-    }
+    // --- Backend API ---
 
     async function accountExists(username) {
-      const accounts = await hiveCall('condenser_api.get_accounts', [[username]]);
-      return accounts && accounts.length > 0;
+      const res = await fetch(`${API_BASE}/api/account/${username}/exists`);
+      const data = await res.json();
+      return data.exists;
     }
 
     async function getTrustDeclarations(username) {
-      const trusted = new Set();
-      let start = -1;
-      let hasMore = true;
-
-      while (hasMore) {
-        const history = await hiveCall('condenser_api.get_account_history', [username, start, 1000, 262144]);
-        if (!history || history.length === 0) break;
-
-        for (const [seq, tx] of history) {
-          const op = tx.op;
-          if (op[0] === 'custom_json' && op[1].id === CUSTOM_JSON_ID) {
-            try {
-              const json = JSON.parse(op[1].json);
-              if (json.trust) trusted.add(json.trust);
-              if (json.revoke) trusted.delete(json.revoke);
-            } catch (e) { /* skip malformed */ }
-          }
-        }
-
-        if (history.length < 1000) {
-          hasMore = false;
-        } else {
-          start = history[0][0] - 1;
-          if (start < 0) hasMore = false;
-        }
-      }
-
-      return trusted;
+      const res = await fetch(`${API_BASE}/api/trust/${username}`);
+      const data = await res.json();
+      return new Set(data.trusts);
     }
 
     // --- Keychain ---
@@ -326,6 +414,9 @@
     function logout() {
       currentUser = null;
       trustedAccounts.clear();
+      vizCancelFlag.cancelled = true;
+      if (cyInstance) { cyInstance.destroy(); cyInstance = null; }
+      trustCache.clear();
       document.getElementById('app-login').style.display = 'block';
       document.getElementById('app-main').style.display = 'none';
       document.getElementById('username-input').value = '';
@@ -424,13 +515,8 @@
 
     // --- Downstream Trust Tree ---
 
-    const trustCache = new Map();
-
     async function getDownstreamTrust(username) {
-      if (trustCache.has(username)) return trustCache.get(username);
-      const result = await getTrustDeclarations(username);
-      trustCache.set(username, result);
-      return result;
+      return getTrustDeclarations(username);
     }
 
     async function renderDownstreamTree() {
@@ -441,7 +527,6 @@
       treeEl.innerHTML = '';
       loadingEl.style.display = 'block';
       emptyEl.style.display = 'none';
-      trustCache.clear();
 
       if (trustedAccounts.size === 0) {
         loadingEl.style.display = 'none';
@@ -449,38 +534,8 @@
         return;
       }
 
-      const visited = new Set([currentUser]);
-
-      async function buildTree(accounts, depth, parentEl) {
-        for (const account of [...accounts].sort()) {
-          if (visited.has(account)) continue;
-          visited.add(account);
-
-          const factor = Math.pow(ATTENUATION, depth);
-          const node = document.createElement('div');
-          node.className = `tree-node depth-${depth}`;
-
-          const attClass = factor >= 0.5 ? 'high' : factor >= 0.25 ? 'medium' : 'low';
-          node.innerHTML = `<span class="account">@${escapeHtml(account)}</span><span class="attenuation ${attClass}">${factor.toFixed(2)}x</span>`;
-          parentEl.appendChild(node);
-
-          if (depth < MAX_DEPTH) {
-            try {
-              const downstream = await getDownstreamTrust(account);
-              if (downstream.size > 0) {
-                await buildTree(downstream, depth + 1, node);
-              }
-            } catch (e) {
-              const err = document.createElement('span');
-              err.className = 'error';
-              err.textContent = ` (failed to load)`;
-              node.appendChild(err);
-            }
-          }
-        }
-      }
-
-      await buildTree(trustedAccounts, 0, treeEl);
+      // Only render depth-0 nodes immediately — deeper levels load on click
+      renderTreeLevel([...trustedAccounts].sort(), 0, treeEl, new Set([currentUser]));
       loadingEl.style.display = 'none';
 
       if (treeEl.children.length === 0) {
@@ -488,10 +543,396 @@
       }
     }
 
+    function renderTreeLevel(accounts, depth, parentEl, visited) {
+      const factor = Math.pow(ATTENUATION, depth);
+      const attClass = factor >= 0.5 ? 'high' : factor >= 0.25 ? 'medium' : 'low';
+
+      for (const account of accounts) {
+        if (visited.has(account)) continue;
+        visited.add(account);
+
+        const node = document.createElement('div');
+        node.className = `tree-node depth-${depth}`;
+        node.innerHTML = `<span class="account">@${escapeHtml(account)}</span><span class="attenuation ${attClass}">${factor.toFixed(2)}x</span>`;
+        parentEl.appendChild(node);
+
+        if (depth < MAX_DEPTH) {
+          const btn = document.createElement('button');
+          btn.className = 'expand-btn';
+          btn.textContent = '▶ expand';
+          btn.onclick = async () => {
+            btn.remove();
+            const loading = document.createElement('span');
+            loading.className = 'child-loading';
+            loading.textContent = 'loading...';
+            node.appendChild(loading);
+            try {
+              const downstream = await getDownstreamTrust(account);
+              loading.remove();
+              if (downstream.size > 0) {
+                renderTreeLevel([...downstream].sort(), depth + 1, node, visited);
+              }
+            } catch {
+              loading.textContent = ' (failed to load)';
+              loading.className = 'error';
+            }
+          };
+          node.appendChild(btn);
+        }
+      }
+    }
+
     function escapeHtml(str) {
       const div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
+    }
+
+    // --- Graph Visualization ---
+
+    let cyInstance = null;
+    let vizCancelFlag = { cancelled: false };
+    const SOFT_NODE_LIMIT = 150;
+    const SOFT_EDGE_LIMIT = 300;
+    const HARD_NODE_LIMIT = 500;
+
+    function switchVizTab(tabName) {
+      vizCancelFlag.cancelled = true;
+      vizCancelFlag = { cancelled: false };
+
+      document.querySelectorAll('.viz-tabs button').forEach(btn => {
+        if (btn.dataset.tab === tabName) {
+          btn.className = '';
+        } else {
+          btn.className = 'secondary';
+        }
+      });
+      document.querySelectorAll('.viz-tab-content').forEach(el => el.classList.remove('active'));
+      const tab = document.getElementById('viz-' + tabName);
+      if (tab) tab.classList.add('active');
+    }
+
+    function showVizProgress(msg, showCancel = true) {
+      const el = document.getElementById('viz-progress');
+      el.style.display = 'block';
+      el.innerHTML = escapeHtml(msg) + (showCancel
+        ? ' <button class="secondary cancel-btn" onclick="vizCancelFlag.cancelled=true">Cancel</button>'
+        : '');
+    }
+
+    function hideVizProgress() {
+      document.getElementById('viz-progress').style.display = 'none';
+    }
+
+    function showGraphContainer() {
+      document.getElementById('graph-container').style.display = 'block';
+      document.getElementById('viz-legend').style.display = 'flex';
+      document.getElementById('viz-summary').style.display = 'none';
+    }
+
+    function hideGraphContainer() {
+      document.getElementById('graph-container').style.display = 'none';
+      document.getElementById('viz-legend').style.display = 'none';
+    }
+
+    /**
+     * Fetches trust graph from backend API in a single request.
+     * Returns { nodes: Map<string,{}>, edges: [{source,target}], depthMap: Map<string,number> }
+     */
+    async function buildGraphData(seeds, maxDepth, cancelFlag) {
+      const root = seeds[0];
+      showVizProgress('Loading trust graph...');
+
+      const res = await fetch(`${API_BASE}/api/trust/${root}/graph?depth=${maxDepth}`);
+      const data = await res.json();
+
+      if (cancelFlag.cancelled) return { nodes: new Map(), edges: [], depthMap: new Map() };
+
+      const nodes = new Map();
+      for (const n of data.nodes) nodes.set(n, {});
+
+      const depthMap = new Map();
+      for (const [account, depth] of Object.entries(data.depth_map)) {
+        depthMap.set(account, depth);
+      }
+
+      return { nodes, edges: data.edges, depthMap };
+    }
+
+    /**
+     * Render a Cytoscape graph from graphData.
+     * options: { layout, highlightUser, targetNode, highlightEdges }
+     */
+    function renderCyGraph(graphData, options = {}) {
+      if (cyInstance) {
+        cyInstance.destroy();
+        cyInstance = null;
+      }
+
+      const elements = [];
+
+      for (const [id] of graphData.nodes) {
+        const data = { id, label: '@' + id };
+        if (id === currentUser) data.isCurrentUser = true;
+        if (id === options.targetNode) data.isTarget = true;
+        elements.push({ data });
+      }
+
+      for (let i = 0; i < graphData.edges.length; i++) {
+        const e = graphData.edges[i];
+        const edgeId = e.source + '->' + e.target + '-' + i;
+        const data = { id: edgeId, source: e.source, target: e.target };
+        if (options.highlightEdges) {
+          const key = e.source + '->' + e.target;
+          if (options.highlightEdges.has(key)) data.highlighted = true;
+        }
+        elements.push({ data });
+      }
+
+      const container = document.getElementById('graph-container');
+      showGraphContainer();
+
+      cyInstance = cytoscape({
+        container,
+        elements,
+        style: [
+          {
+            selector: 'node',
+            style: {
+              'background-color': '#2a2d3a',
+              'label': 'data(label)',
+              'color': '#e0e0e0',
+              'font-size': '9px',
+              'text-valign': 'bottom',
+              'text-margin-y': 5,
+              'border-width': 1,
+              'border-color': '#3a3d4a',
+              'width': 24,
+              'height': 24,
+              'text-max-width': '80px',
+              'text-wrap': 'ellipsis',
+            }
+          },
+          {
+            selector: 'node[?isCurrentUser]',
+            style: { 'background-color': '#3498db', 'border-color': '#2980b9', 'width': 32, 'height': 32, 'font-size': '11px' }
+          },
+          {
+            selector: 'node[?isTarget]',
+            style: { 'background-color': '#2ecc71', 'border-color': '#27ae60', 'width': 32, 'height': 32, 'font-size': '11px' }
+          },
+          {
+            selector: 'edge',
+            style: {
+              'width': 1.5,
+              'line-color': '#3a3d4a',
+              'target-arrow-color': '#3a3d4a',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              'arrow-scale': 0.7,
+            }
+          },
+          {
+            selector: 'edge[?highlighted]',
+            style: {
+              'line-color': '#e31337',
+              'target-arrow-color': '#e31337',
+              'width': 3,
+            }
+          },
+        ],
+        layout: options.layout || { name: 'cose', animate: true, animationDuration: 500, nodeRepulsion: () => 8000, idealEdgeLength: () => 80 },
+        minZoom: 0.2,
+        maxZoom: 3,
+      });
+
+      // Double-click to open profile
+      cyInstance.on('dblclick', 'node', (evt) => {
+        const id = evt.target.id();
+        window.open('https://hive.blog/@' + id, '_blank');
+      });
+    }
+
+    // --- My Trust Neighborhood ---
+
+    async function showNeighborhood() {
+      const depth = parseInt(document.getElementById('neighborhood-depth').value) || 2;
+      vizCancelFlag.cancelled = true;
+      vizCancelFlag = { cancelled: false };
+      const cancel = vizCancelFlag;
+
+      hideGraphContainer();
+      document.getElementById('viz-summary').style.display = 'none';
+
+      const graphData = await buildGraphData([currentUser], depth, cancel);
+      hideVizProgress();
+
+      if (cancel.cancelled) return;
+
+      if (graphData.nodes.size <= 1) {
+        hideGraphContainer();
+        showVizProgress('No trust connections found.', false);
+        return;
+      }
+
+      renderCyGraph(graphData, {
+        layout: { name: 'cose', animate: true, animationDuration: 500, nodeRepulsion: () => 8000, idealEdgeLength: () => 80 },
+      });
+    }
+
+    // --- Full Graph ---
+
+    async function loadFullGraph() {
+      vizCancelFlag.cancelled = true;
+      vizCancelFlag = { cancelled: false };
+      const cancel = vizCancelFlag;
+
+      hideGraphContainer();
+      const warningEl = document.getElementById('full-warning');
+      warningEl.innerHTML = '';
+      document.getElementById('viz-summary').style.display = 'none';
+
+      const graphData = await buildGraphData([currentUser], MAX_DEPTH, cancel);
+      hideVizProgress();
+
+      if (cancel.cancelled) return;
+
+      const nodeCount = graphData.nodes.size;
+      const edgeCount = graphData.edges.length;
+
+      if (nodeCount <= 1) {
+        showVizProgress('No trust connections found.', false);
+        return;
+      }
+
+      // Hard cap
+      if (nodeCount > HARD_NODE_LIMIT) {
+        hideGraphContainer();
+        showGraphSummary(graphData, 'This network is too large to render in the browser.');
+        return;
+      }
+
+      // Soft cap - show warning with option
+      if (nodeCount > SOFT_NODE_LIMIT || edgeCount > SOFT_EDGE_LIMIT) {
+        warningEl.innerHTML = `
+          <div class="viz-warning">
+            This network contains <strong>${nodeCount}</strong> accounts and <strong>${edgeCount}</strong> trust links.
+            Rendering may be slow.
+            <div class="row" style="margin-top:0.5rem;">
+              <button onclick="renderFullGraph()" id="render-anyway-btn">Render Anyway</button>
+              <button class="secondary" onclick="showGraphSummaryFromData()">Show Summary Only</button>
+            </div>
+          </div>
+        `;
+        // Store graphData for deferred render
+        window._pendingGraphData = graphData;
+        return;
+      }
+
+      renderCyGraph(graphData, {
+        layout: { name: 'cose', animate: true, animationDuration: 800, nodeRepulsion: () => 10000, idealEdgeLength: () => 100 },
+      });
+    }
+
+    function renderFullGraph() {
+      const graphData = window._pendingGraphData;
+      if (!graphData) return;
+      document.getElementById('full-warning').innerHTML = '';
+      renderCyGraph(graphData, {
+        layout: { name: 'cose', animate: true, animationDuration: 800, nodeRepulsion: () => 10000, idealEdgeLength: () => 100 },
+      });
+      window._pendingGraphData = null;
+    }
+
+    function showGraphSummaryFromData() {
+      const graphData = window._pendingGraphData;
+      if (!graphData) return;
+      document.getElementById('full-warning').innerHTML = '';
+      showGraphSummary(graphData, null);
+      window._pendingGraphData = null;
+    }
+
+    function showGraphSummary(graphData, message) {
+      hideGraphContainer();
+      const summaryEl = document.getElementById('viz-summary');
+      const nodeCount = graphData.nodes.size;
+      const edgeCount = graphData.edges.length;
+      const avgConnections = nodeCount > 0 ? (edgeCount / nodeCount).toFixed(1) : 0;
+      const maxDepthReached = Math.max(...graphData.depthMap.values());
+
+      summaryEl.style.display = 'block';
+      summaryEl.innerHTML = `
+        ${message ? '<p style="margin-bottom:0.5rem;">' + escapeHtml(message) + '</p>' : ''}
+        <p><strong>${nodeCount}</strong> accounts in the trust network</p>
+        <p><strong>${edgeCount}</strong> trust links</p>
+        <p><strong>${avgConnections}</strong> average connections per account</p>
+        <p><strong>${maxDepthReached}</strong> degrees of trust reached</p>
+      `;
+    }
+
+    // --- Explore Trust Paths ---
+
+    async function explorePaths() {
+      const targetInput = document.getElementById('path-target-input');
+      const errorEl = document.getElementById('paths-error');
+      const target = targetInput.value.trim().toLowerCase().replace('@', '');
+      errorEl.textContent = '';
+
+      if (!target) { errorEl.textContent = 'Enter a username'; return; }
+      if (target === currentUser) { errorEl.textContent = 'That is your own account'; return; }
+
+      vizCancelFlag.cancelled = true;
+      vizCancelFlag = { cancelled: false };
+
+      hideGraphContainer();
+      document.getElementById('viz-summary').style.display = 'none';
+      showVizProgress('Finding trust paths...');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/trust/${currentUser}/paths/${target}?depth=${MAX_DEPTH}`);
+        const data = await res.json();
+        hideVizProgress();
+
+        if (vizCancelFlag.cancelled) return;
+
+        if (data.paths.length === 0) {
+          errorEl.textContent = `No trust paths found from you to @${target} within ${MAX_DEPTH} hops.`;
+          return;
+        }
+
+        // Build subgraph of only nodes/edges on paths
+        const pathNodes = new Map();
+        const pathEdges = [];
+        const highlightEdges = new Set();
+
+        for (const path of data.paths) {
+          for (let i = 0; i < path.length; i++) {
+            pathNodes.set(path[i], {});
+            if (i < path.length - 1) {
+              const key = path[i] + '->' + path[i + 1];
+              if (!highlightEdges.has(key)) {
+                highlightEdges.add(key);
+                pathEdges.push({ source: path[i], target: path[i + 1] });
+              }
+            }
+          }
+        }
+
+        const pathDepthMap = new Map();
+        for (const [account] of pathNodes) pathDepthMap.set(account, 0);
+
+        renderCyGraph(
+          { nodes: pathNodes, edges: pathEdges, depthMap: pathDepthMap },
+          {
+            layout: { name: 'breadthfirst', directed: true, roots: [currentUser], animate: true, animationDuration: 500, spacingFactor: 1.2 },
+            targetNode: target,
+            highlightEdges,
+          }
+        );
+      } catch (err) {
+        hideVizProgress();
+        errorEl.textContent = 'Error finding paths: ' + err.message;
+      }
     }
 
     // --- Init ---
@@ -503,6 +944,10 @@
 
     document.getElementById('trust-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') declareTrust();
+    });
+
+    document.getElementById('path-target-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') explorePaths();
     });
   </script>
 </body>
