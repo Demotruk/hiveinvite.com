@@ -45,6 +45,25 @@ function createApp(db, indexer) {
     res.json({ declarers, count: declarers.length });
   });
 
+  // --- GET /api/trust/edges ---
+  // Returns every active trust edge in one response. Used by consumers that
+  // need the full graph rather than paging per-account (e.g. hive-swarm-post).
+  app.get('/api/trust/edges', (req, res) => {
+    const declarers = db.getDeclarers();
+    const batch = db.getTrustedBatch(declarers);
+    const edges = [];
+    for (const [truster, trustees] of batch) {
+      for (const trustee of trustees) {
+        edges.push({ truster, trustee });
+      }
+    }
+    res.json({
+      edges,
+      count: edges.length,
+      last_indexed_block: db.getLastBlock(),
+    });
+  });
+
   // --- GET /api/trust/:account ---
   app.get('/api/trust/:account', (req, res) => {
     const account = req.params.account.toLowerCase().replace('@', '');
