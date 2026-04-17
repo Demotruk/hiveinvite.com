@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bulk Sign Trusted Onboarders</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --text: #e0e0e0;
+      --text-muted: #888;
+      --accent: #e31337;
+      --accent-hover: #ff1a45;
+      --green: #2ecc71;
+      --yellow: #f1c40f;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .subtitle { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
+    .container { max-width: 900px; margin: 0 auto; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card h3 {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+    input[type="text"], textarea {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      width: 100%;
+      font-family: inherit;
+    }
+    textarea { min-height: 160px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85rem; }
+    input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    button:hover { background: var(--accent-hover); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button.secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    button.secondary:hover { border-color: var(--text); color: var(--text); }
+    .row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .status {
+      font-size: 0.8rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 3px;
+      display: inline-block;
+    }
+    .status.connected { background: rgba(46,204,113,0.15); color: var(--green); }
+    .status.disconnected { background: rgba(227,19,55,0.15); color: var(--accent); }
+    .pill-list { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem; }
+    .pill {
+      font-size: 0.8rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+    .pill.new { border-color: var(--green); color: var(--green); }
+    .pill.skip { border-color: var(--text-muted); color: var(--text-muted); text-decoration: line-through; }
+    .stats { display: flex; gap: 1.5rem; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+    .stats strong { color: var(--text); font-size: 1rem; }
+    .error { color: var(--accent); font-size: 0.85rem; margin-top: 0.5rem; }
+    .info { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem; }
+    .success { color: var(--green); font-size: 0.85rem; margin-top: 0.5rem; }
+    .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .header-row .user-info { display: flex; align-items: center; gap: 0.75rem; }
+    #app-login { display: block; }
+    #app-main { display: none; }
+    .tx-log { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.8rem; color: var(--text-muted); word-break: break-all; }
+    .tx-log a { color: var(--accent); text-decoration: none; }
+    .tx-log a:hover { text-decoration: underline; }
+    .warn { background: rgba(241,196,15,0.1); border: 1px solid rgba(241,196,15,0.3); color: var(--yellow); padding: 0.5rem 0.75rem; border-radius: 4px; font-size: 0.85rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Bulk Sign Trusted Onboarders</h1>
+    <p class="subtitle">One-time tool: paste a list of onboarder usernames and broadcast <code>swarm_trust</code> declarations for all of them in a single Keychain signature.</p>
+
+    <!-- Login -->
+    <div id="app-login">
+      <div class="card">
+        <h3>Connect</h3>
+        <div id="keychain-status"></div>
+        <div class="row" style="margin-top: 0.75rem;">
+          <input type="text" id="username-input" placeholder="Hive username (without @)" style="flex:1;min-width:200px;">
+          <button id="login-btn" onclick="login()">Connect</button>
+        </div>
+        <div id="login-error" class="error"></div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div id="app-main">
+      <div class="header-row">
+        <div class="user-info">
+          <span>@<strong id="display-username"></strong></span>
+          <span class="status connected">Connected</span>
+        </div>
+        <button class="secondary" onclick="logout()">Disconnect</button>
+      </div>
+
+      <div class="card">
+        <h3>Paste Onboarder List</h3>
+        <p class="info" style="margin-top:0;">Comma-separated (commas, newlines, or spaces all work). Leading <code>@</code> is optional.</p>
+        <textarea id="onboarder-input" placeholder="alice, bob, charlie, @dave"></textarea>
+        <div class="row" style="margin-top: 0.75rem;">
+          <button onclick="previewList()">Preview</button>
+          <button class="secondary" onclick="document.getElementById('onboarder-input').value='';document.getElementById('preview').style.display='none';">Clear</button>
+        </div>
+        <div id="parse-error" class="error"></div>
+      </div>
+
+      <div class="card" id="preview" style="display:none;">
+        <h3>Preview</h3>
+        <div class="stats">
+          <span><strong id="stat-new">0</strong> new to trust</span>
+          <span><strong id="stat-skip">0</strong> already trusted (skip)</span>
+          <span><strong id="stat-total">0</strong> total parsed</span>
+        </div>
+
+        <div id="new-section" style="display:none;">
+          <div style="font-size:0.85rem;color:var(--text-muted);margin-top:0.5rem;">Will broadcast <code>swarm_trust</code> for:</div>
+          <div id="new-pills" class="pill-list"></div>
+        </div>
+        <div id="skip-section" style="display:none;">
+          <div style="font-size:0.85rem;color:var(--text-muted);margin-top:0.75rem;">Already trusted, will be skipped:</div>
+          <div id="skip-pills" class="pill-list"></div>
+        </div>
+
+        <div id="size-warn"></div>
+
+        <div class="row" style="margin-top: 1rem;">
+          <button id="sign-btn" onclick="signAll()">Sign & Broadcast</button>
+          <span id="sign-status" class="info"></span>
+        </div>
+        <div id="sign-error" class="error"></div>
+        <div id="sign-result"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'https://swarm-trust-api.fly.dev';
+    const CUSTOM_JSON_ID = 'swarm_trust';
+    // Hive ops-per-tx is generous, but keep a margin for safety.
+    const MAX_OPS_PER_TX = 100;
+
+    let currentUser = null;
+    let trustedAccounts = new Set();
+    let pendingNew = [];
+
+    function hasKeychain() {
+      return typeof window.hive_keychain !== 'undefined';
+    }
+
+    async function accountExists(username) {
+      const res = await fetch(`${API_BASE}/api/account/${username}/exists`);
+      const data = await res.json();
+      return data.exists;
+    }
+
+    async function getTrustDeclarations(username) {
+      const res = await fetch(`${API_BASE}/api/trust/${username}`);
+      const data = await res.json();
+      return new Set(data.trusts);
+    }
+
+    function checkKeychainStatus() {
+      const el = document.getElementById('keychain-status');
+      let attempts = 0;
+      const check = () => {
+        if (hasKeychain()) {
+          el.innerHTML = '<span class="status connected">Hive Keychain detected</span>';
+          document.getElementById('login-btn').disabled = false;
+        } else if (attempts < 10) {
+          attempts++;
+          setTimeout(check, 200);
+        } else {
+          el.innerHTML = '<span class="status disconnected">Hive Keychain not found — please install the extension</span>';
+          document.getElementById('login-btn').disabled = true;
+        }
+      };
+      check();
+    }
+
+    async function login() {
+      const input = document.getElementById('username-input');
+      const errorEl = document.getElementById('login-error');
+      const username = input.value.trim().toLowerCase().replace(/^@/, '');
+      errorEl.textContent = '';
+
+      if (!username) { errorEl.textContent = 'Enter a username'; return; }
+      if (!hasKeychain()) { errorEl.textContent = 'Hive Keychain not detected'; return; }
+
+      try {
+        const exists = await accountExists(username);
+        if (!exists) { errorEl.textContent = `Account @${username} not found`; return; }
+      } catch (e) {
+        errorEl.textContent = 'Failed to verify account: ' + e.message;
+        return;
+      }
+
+      currentUser = username;
+      document.getElementById('display-username').textContent = username;
+      document.getElementById('app-login').style.display = 'none';
+      document.getElementById('app-main').style.display = 'block';
+
+      try {
+        trustedAccounts = await getTrustDeclarations(currentUser);
+      } catch (e) {
+        trustedAccounts = new Set();
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      trustedAccounts.clear();
+      pendingNew = [];
+      document.getElementById('app-login').style.display = 'block';
+      document.getElementById('app-main').style.display = 'none';
+      document.getElementById('username-input').value = '';
+      document.getElementById('onboarder-input').value = '';
+      document.getElementById('preview').style.display = 'none';
+      document.getElementById('sign-result').innerHTML = '';
+      document.getElementById('sign-error').textContent = '';
+    }
+
+    function parseList(raw) {
+      const tokens = raw
+        .split(/[\s,;\n\r\t]+/)
+        .map(s => s.trim().toLowerCase().replace(/^@/, ''))
+        .filter(Boolean)
+        // Hive usernames: 3-16 chars, lowercase letters/digits/dots/hyphens
+        .filter(s => /^[a-z][a-z0-9.\-]{2,15}$/.test(s));
+      return Array.from(new Set(tokens));
+    }
+
+    function previewList() {
+      const errorEl = document.getElementById('parse-error');
+      errorEl.textContent = '';
+      document.getElementById('sign-result').innerHTML = '';
+      document.getElementById('sign-error').textContent = '';
+
+      const raw = document.getElementById('onboarder-input').value;
+      const parsed = parseList(raw);
+
+      if (parsed.length === 0) {
+        errorEl.textContent = 'No valid usernames found.';
+        document.getElementById('preview').style.display = 'none';
+        return;
+      }
+
+      const newOnes = parsed.filter(u => u !== currentUser && !trustedAccounts.has(u));
+      const skipped = parsed.filter(u => u === currentUser || trustedAccounts.has(u));
+
+      pendingNew = newOnes;
+
+      document.getElementById('stat-total').textContent = parsed.length;
+      document.getElementById('stat-new').textContent = newOnes.length;
+      document.getElementById('stat-skip').textContent = skipped.length;
+
+      const newPills = document.getElementById('new-pills');
+      const skipPills = document.getElementById('skip-pills');
+      newPills.innerHTML = '';
+      skipPills.innerHTML = '';
+
+      for (const u of newOnes) {
+        const span = document.createElement('span');
+        span.className = 'pill new';
+        span.textContent = '@' + u;
+        newPills.appendChild(span);
+      }
+      for (const u of skipped) {
+        const span = document.createElement('span');
+        span.className = 'pill skip';
+        span.textContent = '@' + u;
+        skipPills.appendChild(span);
+      }
+
+      document.getElementById('new-section').style.display = newOnes.length ? 'block' : 'none';
+      document.getElementById('skip-section').style.display = skipped.length ? 'block' : 'none';
+
+      const warnEl = document.getElementById('size-warn');
+      if (newOnes.length > MAX_OPS_PER_TX) {
+        warnEl.innerHTML = `<div class="warn">${newOnes.length} ops will be split into ${Math.ceil(newOnes.length / MAX_OPS_PER_TX)} transactions (Keychain will prompt once per batch).</div>`;
+      } else {
+        warnEl.innerHTML = '';
+      }
+
+      document.getElementById('sign-btn').disabled = newOnes.length === 0;
+      document.getElementById('preview').style.display = 'block';
+    }
+
+    function buildOps(accounts) {
+      return accounts.map(account => [
+        'custom_json',
+        {
+          required_auths: [],
+          required_posting_auths: [currentUser],
+          id: CUSTOM_JSON_ID,
+          json: JSON.stringify({ trust: account }),
+        },
+      ]);
+    }
+
+    function broadcastBatch(ops) {
+      return new Promise((resolve, reject) => {
+        window.hive_keychain.requestBroadcast(
+          currentUser,
+          ops,
+          'Posting',
+          (response) => {
+            if (response.success) resolve(response);
+            else reject(new Error(response.message || 'Keychain rejected'));
+          }
+        );
+      });
+    }
+
+    async function signAll() {
+      const errorEl = document.getElementById('sign-error');
+      const statusEl = document.getElementById('sign-status');
+      const resultEl = document.getElementById('sign-result');
+      const btn = document.getElementById('sign-btn');
+      errorEl.textContent = '';
+      resultEl.innerHTML = '';
+
+      if (pendingNew.length === 0) return;
+      if (!hasKeychain()) { errorEl.textContent = 'Hive Keychain not detected'; return; }
+
+      btn.disabled = true;
+
+      const batches = [];
+      for (let i = 0; i < pendingNew.length; i += MAX_OPS_PER_TX) {
+        batches.push(pendingNew.slice(i, i + MAX_OPS_PER_TX));
+      }
+
+      const signed = [];
+      const txLinks = [];
+      try {
+        for (let i = 0; i < batches.length; i++) {
+          statusEl.textContent = `Signing batch ${i + 1} of ${batches.length} (${batches[i].length} ops)…`;
+          const ops = buildOps(batches[i]);
+          const resp = await broadcastBatch(ops);
+          const trxId = resp?.result?.id || resp?.result?.tx_id || null;
+          if (trxId) txLinks.push(trxId);
+          signed.push(...batches[i]);
+          for (const u of batches[i]) trustedAccounts.add(u);
+        }
+        statusEl.textContent = '';
+        resultEl.innerHTML = `
+          <div class="success">Broadcast complete. Trust declared for ${signed.length} onboarder(s).</div>
+          ${txLinks.length ? `<div class="tx-log" style="margin-top:0.5rem;">${txLinks.map(id => `<div><a href="https://hivehub.dev/tx/${id}" target="_blank" rel="noopener">${id}</a></div>`).join('')}</div>` : ''}
+        `;
+        pendingNew = [];
+        document.getElementById('sign-btn').disabled = true;
+        // Refresh preview to reflect new state
+        previewList();
+      } catch (e) {
+        statusEl.textContent = '';
+        errorEl.textContent = `Broadcast failed: ${e.message}`;
+        if (signed.length > 0) {
+          resultEl.innerHTML = `<div class="info">${signed.length} of ${pendingNew.length + signed.length} were signed before the failure. Refresh preview to retry the remainder.</div>`;
+        }
+        document.getElementById('sign-btn').disabled = false;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', checkKeychainStatus);
+    document.getElementById('username-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') login();
+    });
+  </script>
+</body>
+</html>
