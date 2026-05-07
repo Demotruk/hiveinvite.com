@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tools for Curators — HiveInvite</title>
+  <meta name="description" content="Discover and support new Hive users. Follow newbie feeds, explore the trust network, and declare trust for onboarders.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Work Sans', system-ui, -apple-system, sans-serif;
+      background: #1a1d21; color: #f0f0f8;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    a { color: #E31337; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .header {
+      text-align: center;
+      padding: 3rem 1.5rem 2rem;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .header h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    .header h1 .accent { color: #E31337; }
+    .header .tagline {
+      font-size: 1.05rem;
+      color: #9a9da8;
+    }
+    .back-link {
+      display: inline-block;
+      color: #9a9da8;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .back-link:hover { color: #f0f0f8; }
+
+    .tools {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .section-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #666;
+      margin-top: 1rem;
+    }
+    .tool {
+      background: #212529;
+      border: 1px solid #353a40;
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: flex;
+      gap: 1.25rem;
+      align-items: flex-start;
+      transition: border-color 0.2s;
+    }
+    .tool:hover { border-color: #E31337; }
+    .tool-icon {
+      flex-shrink: 0;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: #2a2d35;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tool-icon svg { width: 22px; height: 22px; fill: #E31337; }
+    .tool-body { flex: 1; min-width: 0; }
+    .tool-body h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.25rem;
+    }
+    .tool-body h3 a { color: inherit; }
+    .tool-body h3 a:hover { color: #E31337; text-decoration: none; }
+    .tool-body p {
+      color: #9a9da8;
+      font-size: 0.9rem;
+    }
+    .tool-body .meta {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: #666;
+    }
+
+    footer {
+      text-align: center;
+      color: #666;
+      font-size: 0.85rem;
+      padding: 2rem 1.5rem;
+      border-top: 1px solid #353a40;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+  <section class="header">
+    <a href="/" class="back-link">&larr; HiveInvite</a>
+    <h1>Tools for <span class="accent">Curators</span></h1>
+    <p class="tagline">Discover new Hive users, support their first posts, and manage the trust network that powers onboarding.</p>
+  </section>
+
+  <section class="tools">
+    <div class="section-label">Newbie Discovery Feeds</div>
+
+    <div class="tool">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+      </div>
+      <div class="tool-body">
+        <h3><a href="https://peakd.com/@swarm-newbies" target="_blank" rel="noopener">Curated Newbies</a></h3>
+        <p>Introduction posts from new users onboarded by trusted community members. Follow <strong>@swarm-newbies</strong> to see vetted newcomers in your feed.</p>
+        <div class="meta">Intro posts only &middot; Trusted onboarder network &middot; 30-day window</div>
+      </div>
+    </div>
+
+    <div class="tool">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+      </div>
+      <div class="tool-body">
+        <h3><a href="https://peakd.com/@newbie-follower" target="_blank" rel="noopener">All New Users</a></h3>
+        <p>The first post from every new Hive account, regardless of topic. Follow <strong>@newbie-follower</strong> to catch everyone who needs early support.</p>
+        <div class="meta">Any first post &middot; All new accounts &middot; 10-day window</div>
+      </div>
+    </div>
+
+    <div class="section-label">Trust Network</div>
+
+    <div class="tool">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+      </div>
+      <div class="tool-body">
+        <h3><a href="/trust/">Trust Declaration Manager</a></h3>
+        <p>View and manage your trust declarations. Explore the trust graph, find trust paths to any onboarder, and visualize the network.</p>
+        <div class="meta">Requires Hive Keychain</div>
+      </div>
+    </div>
+
+    <div class="tool">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+      </div>
+      <div class="tool-body">
+        <h3><a href="/sign-onboarders/">Bulk Trust Declarations</a></h3>
+        <p>Paste a list of onboarder usernames and broadcast trust declarations for all of them in a single transaction.</p>
+        <div class="meta">Requires Hive Keychain &middot; One-time bulk tool</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p><a href="/">&larr; Back to HiveInvite</a></p>
+  </footer>
+
+</body>
+</html>
